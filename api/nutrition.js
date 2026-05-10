@@ -1,5 +1,6 @@
-const OPEN_FOOD_FACTS_SEARCH =
-  "https://world.openfoodfacts.org/cgi/search.pl";
+const USDA_FOOD_SEARCH =
+  "https://api.nal.usda.gov/fdc/v1/foods/search";
+const USDA_API_KEY = process.env.USDA_API_KEY || "DEMO_KEY";
 
 function parseFoodInput(input) {
   const raw = String(input || "").trim();
@@ -32,14 +33,20 @@ function toNumber(value) {
   return Number.isFinite(number) ? number : null;
 }
 
-function pickNutrition(product) {
-  const nutriments = product.nutriments || {};
-  const caloriesPer100g =
-    toNumber(nutriments["energy-kcal_100g"]) ||
-    toNumber(nutriments["energy-kcal"]) ||
-    (toNumber(nutriments.energy_100g) ? toNumber(nutriments.energy_100g) / 4.184 : null);
-  const proteinPer100g =
-    toNumber(nutriments.proteins_100g) || toNumber(nutriments.proteins);
+function findNutrient(food, ids, names) {
+  const nutrients = Array.isArray(food.foodNutrients) ? food.foodNutrients : [];
+  const match = nutrients.find((nutrient) => {
+    const id = String(nutrient.nutrientId || nutrient.nutrientNumber || "");
+    const name = String(nutrient.nutrientName || nutrient.name || "").toLowerCase();
+    return ids.includes(id) || names.some((target) => name.includes(target));
+  });
+
+  return match ? toNumber(match.value || match.amount) : null;
+}
+
+function pickNutrition(food) {
+  const caloriesPer100g = findNutrient(food, ["1008", "208"], ["energy"]);
+  const proteinPer100g = findNutrient(food, ["1003", "203"], ["protein"]);
 
   if (caloriesPer100g === null && proteinPer100g === null) {
     return null;
@@ -51,16 +58,18 @@ function pickNutrition(product) {
   };
 }
 
-function scoreProduct(product) {
-  const nutrition = pickNutrition(product);
+function scoreFood(food) {
+  const nutrition = pickNutrition(food);
   if (!nutrition) return -1;
 
   let score = 0;
   if (nutrition.caloriesPer100g !== null) score += 3;
   if (nutrition.proteinPer100g !== null) score += 3;
-  if (product.product_name) score += 2;
-  if (product.brands) score += 1;
-  if (product.image_front_small_url) score += 1;
+  if (food.description) score += 2;
+  if (food.dataType === "Foundation") score += 3;
+  if (food.dataType === "SR Legacy") score += 2;
+  if (food.dataType === "Survey (FNDDS)") score += 2;
+  if (food.brandName || food.brandOwner) score += 1;
   return score;
 }
 
@@ -73,7 +82,7 @@ async function fetchWithRetry(url, options, attempts = 3) {
       if (response.ok || response.status < 500 || attempt === attempts) {
         return response;
       }
-      lastError = new Error(`Open Food Facts returned ${response.status}`);
+      lastError = new Error(`USDA FoodData Central returned ${response.status}`);
     } catch (error) {
       lastError = error;
       if (attempt === attempts) {
@@ -98,34 +107,30 @@ async function searchNutrition(query) {
     };
   }
 
-  const url = new URL(OPEN_FOOD_FACTS_SEARCH);
-  url.searchParams.set("search_terms", parsed.food);
-  url.searchParams.set("search_simple", "1");
-  url.searchParams.set("action", "process");
-  url.searchParams.set("json", "1");
-  url.searchParams.set("page_size", "12");
-  url.searchParams.set(
-    "fields",
-    "product_name,brands,nutriments,serving_size,quantity,url,image_front_small_url"
-  );
+  const url = new URL(USDA_FOOD_SEARCH);
+  url.searchParams.set("api_key", USDA_API_KEY);
+  url.searchParams.set("query", parsed.food);
+  url.searchParams.set("pageSize", "12");
+  url.searchParams.set("sortBy", "dataType.keyword");
+  url.searchParams.set("sortOrder", "asc");
 
   const response = await fetchWithRetry(url, {
     headers: {
       "User-Agent":
-        "CaloriesProteinCalculator/1.0 (learning project; public Open Food Facts API)"
+        "CaloriesProteinCalculator/1.0 (learning project; USDA FoodData Central API)"
     }
   });
 
   if (!response.ok) {
-    throw new Error(`Open Food Facts returned ${response.status}`);
+    throw new Error(`USDA FoodData Central returned ${response.status}`);
   }
 
   const data = await response.json();
-  const products = Array.isArray(data.products) ? data.products : [];
-  const best = products
-    .map((product) => ({ product, score: scoreProduct(product) }))
+  const foods = Array.isArray(data.foods) ? data.foods : [];
+  const best = foods
+    .map((food) => ({ food, score: scoreFood(food) }))
     .filter((entry) => entry.score >= 0)
-    .sort((a, b) => b.score - a.score)[0]?.product;
+    .sort((a, b) => b.score - a.score)[0]?.food;
 
   if (!best) {
     return {
@@ -134,7 +139,7 @@ async function searchNutrition(query) {
         query: parsed.raw,
         food: parsed.food,
         message:
-          "I could not find calories or protein for that food in Open Food Facts."
+          "I could not find calories or protein for that food in USDA FoodData Central."
       }
     };
   }
@@ -149,13 +154,17 @@ async function searchNutrition(query) {
       query: parsed.raw,
       food: parsed.food,
       amountGrams: Number(grams.toFixed(1)),
-      source: "Open Food Facts",
-      matchedFood: best.product_name || parsed.food,
-      brand: best.brands || "",
-      servingSize: best.serving_size || "",
-      quantity: best.quantity || "",
-      image: best.image_front_small_url || "",
-      sourceUrl: best.url || "https://world.openfoodfacts.org",
+      source: "USDA FoodData Central",
+      matchedFood: best.description || parsed.food,
+      brand: best.brandName || best.brandOwner || "",
+      servingSize: best.servingSize
+        ? `${best.servingSize}${best.servingSizeUnit || "g"}`
+        : "",
+      quantity: best.packageWeight || "",
+      image: "",
+      sourceUrl: best.fdcId
+        ? `https://fdc.nal.usda.gov/fdc-app.html#/food-details/${best.fdcId}/nutrients`
+        : "https://fdc.nal.usda.gov",
       per100g: {
         calories: nutrition.caloriesPer100g === null ? null : Math.round(nutrition.caloriesPer100g),
         protein: nutrition.proteinPer100g === null ? null : Number(nutrition.proteinPer100g.toFixed(1))

@@ -1,6 +1,6 @@
 # Calories and Protein Online Server
 
-A small web app that uses internet access to look up food nutrition data and estimate calories and protein.
+A small web app that uses internet access to look up USDA nutrition data and estimate calories and protein.
 
 ## Run
 
@@ -23,7 +23,9 @@ Enter a food name with an optional amount:
 - `8oz milk`
 - `1kg apples`
 
-The backend calls the public Open Food Facts API, chooses a nutrition match, and returns calories/protein per 100g plus an estimate for the amount you entered.
+The backend calls the USDA FoodData Central API, chooses a nutrition match, and returns calories/protein per 100g plus an estimate for the amount you entered.
+
+By default it uses USDA's `DEMO_KEY`, which is fine for light testing. For heavier public use, create a free USDA FoodData Central API key and set it as `USDA_API_KEY` in your hosting environment.
 
 ## Deploy On Render
 
