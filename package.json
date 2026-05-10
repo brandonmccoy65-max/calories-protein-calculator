@@ -1,0 +1,16 @@
+{
+  "name": "calories-protein-online-server",
+  "version": "1.0.0",
+  "description": "A small online calories and protein calculator using public nutrition data.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "calories",
+    "protein",
+    "nutrition",
+    "server"
+  ],
+  "license": "MIT"
+}

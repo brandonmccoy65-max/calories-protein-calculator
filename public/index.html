@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Calories and Protein Calculator</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="app">
+      <section class="panel">
+        <div class="heading">
+          <p class="eyebrow">Online nutrition lookup</p>
+          <h1>Calories and Protein Calculator</h1>
+        </div>
+
+        <form id="food-form" class="search">
+          <label for="food-input">Food</label>
+          <div class="search-row">
+            <input
+              id="food-input"
+              name="food"
+              type="search"
+              placeholder="Example: 200g chicken breast"
+              autocomplete="off"
+              required
+            >
+            <button type="submit">Calculate</button>
+          </div>
+        </form>
+
+        <section id="result" class="result" aria-live="polite">
+          <div class="empty-state">
+            Enter a food with an optional amount like 150g, 1kg, or 8oz.
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
