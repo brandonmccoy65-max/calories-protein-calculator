@@ -37,6 +37,17 @@ node server.js
 
 Render will use the `PORT` environment variable automatically.
 
+## Deploy On Vercel
+
+If Render asks for a paid plan, deploy on Vercel instead:
+
+1. Import this GitHub repository in Vercel.
+2. Choose the free Hobby plan.
+3. Keep the default project settings.
+4. Deploy.
+
+The Vercel deployment uses `api/nutrition.js` as a serverless function and serves the files in `public/`.
+
 ## API
 
 ```text
