@@ -1,16 +1,17 @@
-const USDA_FOOD_SEARCH =
-  "https://api.nal.usda.gov/fdc/v1/foods/search";
-const USDA_API_KEY = process.env.USDA_API_KEY || "DEMO_KEY";
+const NUTRITIONIX_SEARCH = "https://trackapi.nutritionix.com/v2/search/instant";
+const NUTRITIONIX_NATURAL = "https://trackapi.nutritionix.com/v2/natural/nutrients";
+const NUTRITIONIX_APP_ID = process.env.NUTRITIONIX_APP_ID || "";
+const NUTRITIONIX_API_KEY = process.env.NUTRITIONIX_API_KEY || "";
 
 function parseFoodInput(input) {
   const raw = String(input || "").trim();
   const amountMatch = raw.match(
     /(?:^|\s)(\d+(?:\.\d+)?)\s*(g|gram|grams|kg|kilogram|kilograms|oz|ounce|ounces)\b/i
   );
-
+  
   let grams = null;
   let food = raw;
-
+  
   if (amountMatch) {
     const value = Number(amountMatch[1]);
     const unit = amountMatch[2].toLowerCase();
@@ -28,51 +29,6 @@ function parseFoodInput(input) {
   };
 }
 
-function toNumber(value) {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : null;
-}
-
-function findNutrient(food, ids, names) {
-  const nutrients = Array.isArray(food.foodNutrients) ? food.foodNutrients : [];
-  const match = nutrients.find((nutrient) => {
-    const id = String(nutrient.nutrientId || nutrient.nutrientNumber || "");
-    const name = String(nutrient.nutrientName || nutrient.name || "").toLowerCase();
-    return ids.includes(id) || names.some((target) => name.includes(target));
-  });
-
-  return match ? toNumber(match.value || match.amount) : null;
-}
-
-function pickNutrition(food) {
-  const caloriesPer100g = findNutrient(food, ["1008", "208"], ["energy"]);
-  const proteinPer100g = findNutrient(food, ["1003", "203"], ["protein"]);
-
-  if (caloriesPer100g === null && proteinPer100g === null) {
-    return null;
-  }
-
-  return {
-    caloriesPer100g,
-    proteinPer100g
-  };
-}
-
-function scoreFood(food) {
-  const nutrition = pickNutrition(food);
-  if (!nutrition) return -1;
-
-  let score = 0;
-  if (nutrition.caloriesPer100g !== null) score += 3;
-  if (nutrition.proteinPer100g !== null) score += 3;
-  if (food.description) score += 2;
-  if (food.dataType === "Foundation") score += 3;
-  if (food.dataType === "SR Legacy") score += 2;
-  if (food.dataType === "Survey (FNDDS)") score += 2;
-  if (food.brandName || food.brandOwner) score += 1;
-  return score;
-}
-
 async function fetchWithRetry(url, options, attempts = 3) {
   let lastError = null;
 
@@ -82,7 +38,7 @@ async function fetchWithRetry(url, options, attempts = 3) {
       if (response.ok || response.status < 500 || attempt === attempts) {
         return response;
       }
-      lastError = new Error(`USDA FoodData Central returned ${response.status}`);
+      lastError = new Error(`Nutritionix returned ${response.status}`);
     } catch (error) {
       lastError = error;
       if (attempt === attempts) {
@@ -107,77 +63,66 @@ async function searchNutrition(query) {
     };
   }
 
-  const url = new URL(USDA_FOOD_SEARCH);
-  url.searchParams.set("api_key", USDA_API_KEY);
-  url.searchParams.set("query", parsed.food);
-  url.searchParams.set("pageSize", "12");
-  url.searchParams.set("sortBy", "dataType.keyword");
-  url.searchParams.set("sortOrder", "asc");
-
-  const response = await fetchWithRetry(url, {
+  // Use Nutritionix Natural API for accurate nutrition data
+  const response = await fetchWithRetry(NUTRITIONIX_NATURAL, {
+    method: "POST",
     headers: {
-      "User-Agent":
-        "CaloriesProteinCalculator/1.0 (learning project; USDA FoodData Central API)"
-    }
+      "Content-Type": "application/json",
+      "x-app-id": NUTRITIONIX_APP_ID,
+      "x-app-key": NUTRITIONIX_API_KEY
+    },
+    body: JSON.stringify({ query: parsed.raw })
   });
 
   if (!response.ok) {
-    throw new Error(`USDA FoodData Central returned ${response.status}`);
+    throw new Error(`Nutritionix returned ${response.status}`);
   }
 
   const data = await response.json();
   const foods = Array.isArray(data.foods) ? data.foods : [];
-  const best = foods
-    .map((food) => ({ food, score: scoreFood(food) }))
-    .filter((entry) => entry.score >= 0)
-    .sort((a, b) => b.score - a.score)[0]?.food;
-
-  if (!best) {
+  
+  if (foods.length === 0) {
     return {
       status: 200,
       body: {
         query: parsed.raw,
         food: parsed.food,
-        message:
-          "I could not find calories or protein for that food in USDA FoodData Central."
+        message: "I could not find calories or protein for that food."
       }
     };
   }
 
-  const nutrition = pickNutrition(best);
-  const grams = parsed.grams || 100;
-  const multiplier = grams / 100;
+  // Use the first food result (most relevant)
+  const food = foods[0];
+  const grams = parsed.grams || food.serving_qty * (food.serving_unit === "g" ? 1 : 
+                 food.serving_unit === "oz" ? 28.3495 : 
+                 food.serving_unit === "kg" ? 1000 : 100) || 100;
+  
+  // Calculate based on serving size if available
+  let multiplier = 1;
+  if (food.serving_qty && food.serving_weight_grams) {
+    multiplier = grams / food.serving_weight_grams;
+  }
 
   return {
     status: 200,
     body: {
       query: parsed.raw,
-      food: parsed.food,
+      food: food.food_name || parsed.food,
       amountGrams: Number(grams.toFixed(1)),
-      source: "USDA FoodData Central",
-      matchedFood: best.description || parsed.food,
-      brand: best.brandName || best.brandOwner || "",
-      servingSize: best.servingSize
-        ? `${best.servingSize}${best.servingSizeUnit || "g"}`
+      matchedFood: food.food_name || parsed.food,
+      brand: food.brand_name || "",
+      servingSize: food.serving_qty && food.serving_unit 
+        ? `${food.serving_qty} ${food.serving_unit}` 
         : "",
-      quantity: best.packageWeight || "",
-      image: "",
-      sourceUrl: best.fdcId
-        ? `https://fdc.nal.usda.gov/fdc-app.html#/food-details/${best.fdcId}/nutrients`
-        : "https://fdc.nal.usda.gov",
+      image: food.photo?.thumb || "",
       per100g: {
-        calories: nutrition.caloriesPer100g === null ? null : Math.round(nutrition.caloriesPer100g),
-        protein: nutrition.proteinPer100g === null ? null : Number(nutrition.proteinPer100g.toFixed(1))
+        calories: food.nf_calories ? Math.round(food.nf_calories) : null,
+        protein: food.nf_protein ? Number(food.nf_protein.toFixed(1)) : null
       },
       estimatedForAmount: {
-        calories:
-          nutrition.caloriesPer100g === null
-            ? null
-            : Math.round(nutrition.caloriesPer100g * multiplier),
-        protein:
-          nutrition.proteinPer100g === null
-            ? null
-            : Number((nutrition.proteinPer100g * multiplier).toFixed(1))
+        calories: food.nf_calories ? Math.round(food.nf_calories * multiplier) : null,
+        protein: food.nf_protein ? Number((food.nf_protein * multiplier).toFixed(1)) : null
       }
     }
   };
@@ -188,17 +133,14 @@ async function fetchSuggestions(query) {
     return { suggestions: [] };
   }
 
-  const url = new URL(USDA_FOOD_SEARCH);
-  url.searchParams.set("api_key", USDA_API_KEY);
+  const url = new URL(NUTRITIONIX_SEARCH);
   url.searchParams.set("query", query);
-  url.searchParams.set("pageSize", "8");
-  url.searchParams.set("sortBy", "dataType.keyword");
-  url.searchParams.set("sortOrder", "asc");
 
   const response = await fetchWithRetry(url, {
+    method: "GET",
     headers: {
-      "User-Agent":
-        "CaloriesProteinCalculator/1.0 (learning project; USDA FoodData Central API)"
+      "x-app-id": NUTRITIONIX_APP_ID,
+      "x-app-key": NUTRITIONIX_API_KEY
     }
   });
 
@@ -207,15 +149,17 @@ async function fetchSuggestions(query) {
   }
 
   const data = await response.json();
-  const foods = Array.isArray(data.foods) ? data.foods : [];
+  const common = Array.isArray(data.common) ? data.common : [];
+  const branded = Array.isArray(data.branded) ? data.branded : [];
   
-  const suggestions = foods
-    .filter((food) => food.description && food.dataType)
-    .map((food) => ({
-      description: food.description,
-      dataType: food.dataType,
-      fdcId: food.fdcId
-    }));
+  const suggestions = [...common, ...branded]
+    .slice(0, 8)
+    .map((item) => ({
+      description: item.food_name || item.tag_name || "",
+      dataType: item.brand_name ? "Branded" : "Common",
+      brand: item.brand_name || ""
+    }))
+    .filter((item) => item.description);
 
   return { suggestions };
 }

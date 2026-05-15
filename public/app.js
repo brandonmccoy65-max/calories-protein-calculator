@@ -26,7 +26,7 @@ function showLoading() {
   result.innerHTML = `
     <div class="loading-state">
       <div class="loading-spinner"></div>
-      <p>Analyzing nutrition data from USDA...</p>
+      <p>Analyzing nutrition data...</p>
     </div>
   `;
 }
@@ -52,7 +52,7 @@ function showSuggestions(suggestions) {
         <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5"/>
       </svg>
       <span class="suggestion-text">${highlightMatch(escapeHtml(item.description), input.value.trim())}</span>
-      <span class="suggestion-meta">${escapeHtml(item.dataType || "USDA")}</span>
+      <span class="suggestion-meta">${escapeHtml(item.dataType || "")}</span>
     </div>
   `).join("");
 
@@ -133,11 +133,6 @@ function renderResult(data) {
       <p class="details">
         <strong>Per 100g:</strong> ${formatValue(data.per100g.calories, "")} calories and
         ${formatValue(data.per100g.protein, "g")} protein.
-        <br>
-        <strong>Source:</strong>
-        <a href="${escapeHtml(data.sourceUrl)}" target="_blank" rel="noreferrer">
-          ${escapeHtml(data.source)} →
-        </a>
       </p>
     </div>
   `;
