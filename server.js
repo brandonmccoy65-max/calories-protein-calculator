@@ -8,6 +8,7 @@ const PUBLIC_DIR = path.join(__dirname, "public");
 const USDA_FOOD_SEARCH =
   "https://api.nal.usda.gov/fdc/v1/foods/search";
 const USDA_API_KEY = process.env.USDA_API_KEY || "DEMO_KEY";
+const HOST = process.env.HOST || "0.0.0.0";
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -248,6 +249,6 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, HOST, () => {
   console.log(`Calories and protein calculator running at http://localhost:${PORT}`);
 });

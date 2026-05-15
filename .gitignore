@@ -1,3 +1,56 @@
+```
+# Dependencies
 node_modules/
+
+# Environment variables
 .env
+.env.local
+.env.*
+
+# Logs
 *.log
+
+# Build outputs
+dist/
+build/
+target/
+
+# Cache directories
+.cache/
+.nyc_output/
+.coverage/
+
+# IDE specific
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated
+.DS_Store
+Thumbs.db
+
+# Compressed files
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
+```

@@ -6,3 +6,8 @@ services:
     buildCommand: ""
     startCommand: node server.js
     autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: USDA_API_KEY
+        sync: false

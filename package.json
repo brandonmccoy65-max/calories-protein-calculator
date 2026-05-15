@@ -4,7 +4,8 @@
   "description": "A small online calories and protein calculator using public nutrition data.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node --watch server.js"
   },
   "keywords": [
     "calories",
@@ -12,5 +13,8 @@
     "nutrition",
     "server"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }
