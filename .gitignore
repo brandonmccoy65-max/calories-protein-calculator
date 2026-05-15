@@ -2,35 +2,42 @@
 # Dependencies
 node_modules/
 
-# Environment variables
+# Environment
 .env
 .env.local
-.env.*
+*.env.*
 
-# Logs
+# Logs and temp files
 *.log
+*.tmp
 
-# Build outputs
-dist/
-build/
-target/
-
-# Cache directories
-.cache/
-.nyc_output/
-.coverage/
-
-# IDE specific
+# Editors
 .vscode/
 .idea/
-*.swp
-*.swo
 
-# OS generated
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.coverage
+coverage/
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# OS generated files
 .DS_Store
 Thumbs.db
 
-# Compressed files
+# Compression
 *.zip
 *.gz
 *.tar

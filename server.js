@@ -101,6 +101,39 @@ function scoreFood(food) {
   return score;
 }
 
+async function fetchSuggestions(query) {
+  const url = new URL(USDA_FOOD_SEARCH);
+  url.searchParams.set("api_key", USDA_API_KEY);
+  url.searchParams.set("query", query);
+  url.searchParams.set("pageSize", "8");
+  url.searchParams.set("sortBy", "dataType.keyword");
+  url.searchParams.set("sortOrder", "asc");
+
+  const response = await fetchWithRetry(url, {
+    headers: {
+      "User-Agent":
+        "CaloriesProteinCalculator/1.0 (learning project; USDA FoodData Central API)"
+    }
+  });
+
+  if (!response.ok) {
+    return { suggestions: [] };
+  }
+
+  const data = await response.json();
+  const foods = Array.isArray(data.foods) ? data.foods : [];
+  
+  const suggestions = foods
+    .filter((food) => food.description && food.dataType)
+    .map((food) => ({
+      description: food.description,
+      dataType: food.dataType,
+      fdcId: food.fdcId
+    }));
+
+  return { suggestions };
+}
+
 async function searchNutrition(query) {
   const parsed = parseFoodInput(query);
   if (!parsed.food || parsed.food.length < 2) {
@@ -236,6 +269,13 @@ const server = http.createServer(async (req, res) => {
       const query = url.searchParams.get("q") || "";
       const result = await searchNutrition(query);
       sendJson(res, result.error ? 400 : 200, result);
+      return;
+    }
+
+    if (url.pathname === "/api/suggestions") {
+      const query = url.searchParams.get("q") || "";
+      const result = await fetchSuggestions(query);
+      sendJson(res, 200, result);
       return;
     }
 
