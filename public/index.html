@@ -3,37 +3,77 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Calories and Protein Calculator</title>
+    <meta name="description" content="Free online calories and protein calculator. Get instant, accurate nutrition facts for any food with our smart search engine.">
+    <meta name="theme-color" content="#1f5f3a">
+    <title>Calories and Protein Calculator | Instant Nutrition Facts</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
     <main class="app">
       <section class="panel">
         <div class="heading">
-          <p class="eyebrow">Online nutrition lookup</p>
-          <h1>Calories and Protein Calculator</h1>
+          <p class="eyebrow">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+            Accurate Nutrition Data
+          </p>
+          <h1>Calories & Protein Calculator</h1>
+          <p class="subtitle">Get instant, accurate nutrition facts for any food</p>
         </div>
 
         <form id="food-form" class="search">
-          <label for="food-input">Food</label>
-          <div class="search-row">
-            <input
-              id="food-input"
-              name="food"
-              type="search"
-              placeholder="Example: 200g chicken breast"
-              autocomplete="off"
-              required
-            >
-            <button type="submit">Calculate</button>
+          <label for="food-input">
+            <svg class="icon-small" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.35-4.35"/>
+            </svg>
+            Search food
+          </label>
+          <div class="search-wrapper">
+            <div class="search-row">
+              <input
+                id="food-input"
+                name="food"
+                type="search"
+                placeholder="Type a food... e.g., 200g chicken breast"
+                autocomplete="off"
+                autocorrect="off"
+                spellcheck="false"
+                required
+                aria-label="Search for food"
+                aria-describedby="search-hint"
+              >
+              <button type="submit" id="search-btn">
+                <span class="btn-text">Calculate</span>
+                <svg class="icon-btn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </button>
+            </div>
+            <div id="search-hint" class="search-hint">
+              💡 Tip: Add amount like "150g", "1 cup", or "8 oz" for precise results
+            </div>
+            <div id="suggestions" class="suggestions" role="listbox" aria-label="Food suggestions" hidden></div>
           </div>
         </form>
 
-        <section id="result" class="result" aria-live="polite">
+        <section id="result" class="result" aria-live="polite" aria-busy="false">
           <div class="empty-state">
-            Enter a food with an optional amount like 150g, 1kg, or 8oz.
+            <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+              <circle cx="12" cy="12" r="4"/>
+            </svg>
+            <p>Enter a food with an optional amount like <strong>150g chicken</strong>, <strong>1 cup rice</strong>, or <strong>8oz salmon</strong>.</p>
           </div>
         </section>
+
+        <footer class="footer">
+          <p>Nutrition data powered by professional nutrition database.</p>
+        </footer>
       </section>
     </main>
 

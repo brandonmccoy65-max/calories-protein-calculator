@@ -8,6 +8,7 @@ const PUBLIC_DIR = path.join(__dirname, "public");
 const USDA_FOOD_SEARCH =
   "https://api.nal.usda.gov/fdc/v1/foods/search";
 const USDA_API_KEY = process.env.USDA_API_KEY || "DEMO_KEY";
+const HOST = process.env.HOST || "0.0.0.0";
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -98,6 +99,39 @@ function scoreFood(food) {
   if (food.dataType === "Survey (FNDDS)") score += 2;
   if (food.brandName || food.brandOwner) score += 1;
   return score;
+}
+
+async function fetchSuggestions(query) {
+  const url = new URL(USDA_FOOD_SEARCH);
+  url.searchParams.set("api_key", USDA_API_KEY);
+  url.searchParams.set("query", query);
+  url.searchParams.set("pageSize", "8");
+  url.searchParams.set("sortBy", "dataType.keyword");
+  url.searchParams.set("sortOrder", "asc");
+
+  const response = await fetchWithRetry(url, {
+    headers: {
+      "User-Agent":
+        "CaloriesProteinCalculator/1.0 (learning project; USDA FoodData Central API)"
+    }
+  });
+
+  if (!response.ok) {
+    return { suggestions: [] };
+  }
+
+  const data = await response.json();
+  const foods = Array.isArray(data.foods) ? data.foods : [];
+  
+  const suggestions = foods
+    .filter((food) => food.description && food.dataType)
+    .map((food) => ({
+      description: food.description,
+      dataType: food.dataType,
+      fdcId: food.fdcId
+    }));
+
+  return { suggestions };
 }
 
 async function searchNutrition(query) {
@@ -238,6 +272,13 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (url.pathname === "/api/suggestions") {
+      const query = url.searchParams.get("q") || "";
+      const result = await fetchSuggestions(query);
+      sendJson(res, 200, result);
+      return;
+    }
+
     await serveStatic(req, res, url);
   } catch (error) {
     sendJson(res, 500, {
@@ -248,6 +289,6 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, HOST, () => {
   console.log(`Calories and protein calculator running at http://localhost:${PORT}`);
 });

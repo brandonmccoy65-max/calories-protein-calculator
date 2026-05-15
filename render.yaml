@@ -6,3 +6,10 @@ services:
     buildCommand: ""
     startCommand: node server.js
     autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NUTRITIONIX_APP_ID
+        sync: false
+      - key: NUTRITIONIX_API_KEY
+        sync: false
